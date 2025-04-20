@@ -27,4 +27,33 @@ Run the executable
 
 &nbsp;
 
-## C, but with some limitations
+## Simplified C Syntax
+
+### 1. Identifiers
+
+- Must start with an alphabetic character or an underscore (`_`).
+- Can contain any combination of letters, digits, and underscores after the first character.
+
+### 2. Numbers
+
+- Must start with a digit.
+- Can contain **one** dot `.` to separate the integer and decimal parts.
+- May end with the letter `f` to represent a `float`.
+
+### 3. String Literals
+
+- Must start and end with a double quote `"`.
+- The sequence `\"` is used to escape a double quote within the string.
+
+### 4. Operators
+
+- Supported operators include:  
+  `*`, `/`, `%`, `+`, `-`, `==`, `!=`, `&&`, `||`, `=`, `+=`, `-=`, `*=`, `/=`, `%=`, `&`, `|`, `.`, `>`, `<`, `>=`, `<=`, `!`
+- If an operator consists of multiple characters, each individual character must also be a valid operator on its own.
+
+### 5. Separators
+
+- **Token-generating separators**:  
+  `(`, `)`, `{`, `}`, `[`, `]`, `;`, `,`
+- **Ignored separators (do not generate tokens)**:  
+  whitespace, newline `\n`, tab `\t`

@@ -22,7 +22,7 @@ const string NUMERIC_PATTERN = "(^[0-9]+(\\.[0-9]+)?f?$)";
 const string NUMERIC_INCOMPLETE_PATTERN = "^[0-9]+\\.$";
 const string LITERAL_PATTERN = R"(^\"([^\"\\\n]|\\.)*\"$)";
 const string LITERAL_INCOMPLETE_PATTERN = R"(^\"([^\"\\\n]|\\.)*$)";
-const vector<string> OPERATORS = {"*", "/", "%", "+", "-", "==", "!=", "&&", "||", "=", "+=", "-=", "*=", "/=", "%="};
+const vector<string> OPERATORS = {"*", "/", "%", "+", "-", "==", "!=", "&&", "||", "=", "+=", "-=", "*=", "/=", "%=", "&", "|", ".", ">", "<", ">=", "<=", "!"};
 const vector<string> SEPARATORS_IGNORED = {" ", "\n", "\t"};
 const vector<string> SEPARATORS_IMPORTANT = {"(", ")", "{", "}", "[", "]", ";", ",", "."};
 
