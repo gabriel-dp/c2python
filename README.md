@@ -24,3 +24,7 @@ Run the executable
 ```bash
 ./bin/compiler <source_file>
 ```
+
+&nbsp;
+
+## C, but with some limitations

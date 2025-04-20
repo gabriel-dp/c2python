@@ -10,6 +10,8 @@ const regex ALPHA_REGEX = regex(ALPHA_PATTERN);
 const regex ALPHA_NUMERIC_REGEX = regex(ALPHA_NUMERIC_PATTERN);
 const regex NUMERIC_REGEX = regex(NUMERIC_PATTERN);
 const regex NUMERIC_INCOMPLETE_REGEX = regex(NUMERIC_INCOMPLETE_PATTERN);
+const regex LITERAL_REGEX = regex(LITERAL_PATTERN);
+const regex LITERAL_INCOMPLETE_REGEX = regex(LITERAL_INCOMPLETE_PATTERN);
 const regex OPERATORS_REGEX = create_regex(OPERATORS);
 const regex SEPARATORS_IGNORED_REGEX = create_regex(SEPARATORS_IGNORED);
 const regex SEPARATORS_IMPORTANT_REGEX = create_regex(SEPARATORS_IMPORTANT);
@@ -49,7 +51,7 @@ Token get_token(string::iterator& sentinel, string::iterator end, pair<int, int>
         string actual_char(1, *scout);
         string content_updated = token.content + actual_char;
 
-        if (regex_search(actual_char, SEPARATORS_IGNORED_REGEX)) {
+        if (token.type != LITERAL && regex_search(actual_char, SEPARATORS_IGNORED_REGEX)) {
             break;
         }
 
@@ -62,40 +64,51 @@ Token get_token(string::iterator& sentinel, string::iterator end, pair<int, int>
                 break;
             } else if (regex_search(actual_char, OPERATORS_REGEX)) {
                 token.type = OPERATOR;
-            } else if (regex_search(actual_char, NUMERIC_REGEX)) {
+            } else if (regex_search(actual_char, NUMERIC_INCOMPLETE_REGEX)) {
                 token.type = NUMBER;
+            } else if (regex_search(actual_char, LITERAL_INCOMPLETE_REGEX)) {
+                token.type = LITERAL;
             }
-            token.content = content_updated;
         } else if (token.type == IDENTIFICATOR) {
             if (!regex_search(content_updated, ALPHA_NUMERIC_REGEX)) {
                 if (regex_search(actual_char, SEPARATORS_IMPORTANT_REGEX) || regex_search(actual_char, OPERATORS_REGEX)) {
                     break;
                 }
-                // error
+                token.content = content_updated;
+                lexical_error(token);
             }
-            token.content = content_updated;
         } else if (token.type == OPERATOR) {
             if (!regex_search(content_updated, OPERATORS_REGEX)) {
-                if (regex_search(actual_char, SEPARATORS_IMPORTANT_REGEX) || regex_search(actual_char, ALPHA_REGEX) || regex_search(actual_char, NUMERIC_REGEX)) {
+                if (regex_search(actual_char, SEPARATORS_IMPORTANT_REGEX) || regex_search(actual_char, ALPHA_REGEX) || regex_search(actual_char, NUMERIC_REGEX) || regex_search(actual_char, LITERAL_INCOMPLETE_REGEX)) {
                     break;
                 }
-                // error
+                token.content = content_updated;
+                lexical_error(token);
             }
-            token.content = content_updated;
         } else if (token.type == NUMBER) {
             if (token.valid && !regex_search(content_updated, NUMERIC_REGEX)) {
                 if (regex_search(content_updated, NUMERIC_INCOMPLETE_REGEX)) {
+                    token.valid = false;
                 } else {
+                    token.valid = true;
                     if (regex_search(actual_char, SEPARATORS_IMPORTANT_REGEX) || regex_search(actual_char, OPERATORS_REGEX)) {
                         break;
                     }
-                    // error
+                    token.content = content_updated;
+                    lexical_error(token);
                 }
             }
-            token.content = content_updated;
-        } else {
-            token.content = content_updated;
+        } else if (token.type == LITERAL) {
+            if (!regex_search(content_updated, LITERAL_INCOMPLETE_REGEX)) {
+                if (regex_search(content_updated, LITERAL_REGEX)) {
+                    token.content = content_updated;
+                    break;
+                }
+                token.content = content_updated;
+                lexical_error(token);
+            }
         }
+        token.content = content_updated;
     }
 
     advance(sentinel, token.content.size());
@@ -130,7 +143,14 @@ string enum_type_string(TokenType type) {
             return "SEPARATOR";
         case OPERATOR:
             return "OPERATOR";
+        case LITERAL:
+            return "LITERAL";
         default:
             return "UNKNOWN";
     }
+}
+
+void lexical_error(Token token) {
+    cout << "Invalid token " << token.content << " at line " << token.position.second << " (" << token.position.first << ")\n";
+    exit(1);
 }

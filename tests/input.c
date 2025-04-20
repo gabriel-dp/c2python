@@ -1,2 +1,9 @@
-int a=(565166165*8);
-float b= 0.1f;
+int main() {
+    const char*msg ="Hello, world!"           ;
+        write(1   , msg,14 );
+    
+    
+    
+       return
+     0;
+}
