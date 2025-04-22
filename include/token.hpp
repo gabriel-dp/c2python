@@ -14,6 +14,7 @@ enum TokenType {
     SEPARATOR,
     LITERAL,
     NUMBER,
+    COMMENT
 };
 
 const string ALPHA_PATTERN = "^[A-Za-z_]+$";
@@ -22,6 +23,9 @@ const string NUMERIC_PATTERN = "(^[0-9]+(\\.[0-9]+)?f?$)";
 const string NUMERIC_INCOMPLETE_PATTERN = "^[0-9]+\\.$";
 const string LITERAL_PATTERN = R"(^\"([^\"\\\n]|\\.)*\"$)";
 const string LITERAL_INCOMPLETE_PATTERN = R"(^\"([^\"\\\n]|\\.)*$)";
+const string COMMENT_LINE_PATTERN = R"(^//.*)";
+const string COMMENT_BLOCK_PATTERN = R"(/\*[\s\S]*?\*/)";
+const string COMMENT_BLOCK_INCOMPLETE_PATTERN = R"(/\*[\s\S]*)";
 const vector<string> OPERATORS = {"*", "/", "%", "+", "-", "==", "!=", "&&", "||", "=", "+=", "-=", "*=", "/=", "%=", "&", "|", ".", ">", "<", ">=", "<=", "!"};
 const vector<string> SEPARATORS_IGNORED = {" ", "\n", "\t"};
 const vector<string> SEPARATORS_IMPORTANT = {"(", ")", "{", "}", "[", "]", ";", ",", "."};

@@ -12,6 +12,9 @@ const regex NUMERIC_REGEX = regex(NUMERIC_PATTERN);
 const regex NUMERIC_INCOMPLETE_REGEX = regex(NUMERIC_INCOMPLETE_PATTERN);
 const regex LITERAL_REGEX = regex(LITERAL_PATTERN);
 const regex LITERAL_INCOMPLETE_REGEX = regex(LITERAL_INCOMPLETE_PATTERN);
+const regex COMMENT_LINE_REGEX = regex(COMMENT_LINE_PATTERN);
+const regex COMMENT_BLOCK_REGEX = regex(COMMENT_BLOCK_PATTERN);
+const regex COMMENT_BLOCK_INCOMPLETE_REGEX = regex(COMMENT_BLOCK_INCOMPLETE_PATTERN);
 const regex OPERATORS_REGEX = create_regex(OPERATORS);
 const regex SEPARATORS_IGNORED_REGEX = create_regex(SEPARATORS_IGNORED);
 const regex SEPARATORS_IMPORTANT_REGEX = create_regex(SEPARATORS_IMPORTANT);
@@ -51,7 +54,7 @@ Token get_token(string::iterator& sentinel, string::iterator end, pair<int, int>
         string actual_char(1, *scout);
         string content_updated = token.content + actual_char;
 
-        if (token.type != LITERAL && regex_search(actual_char, SEPARATORS_IGNORED_REGEX)) {
+        if (token.type != LITERAL && token.type != COMMENT && regex_search(actual_char, SEPARATORS_IGNORED_REGEX)) {
             break;
         }
 
@@ -78,7 +81,9 @@ Token get_token(string::iterator& sentinel, string::iterator end, pair<int, int>
                 lexical_error(token);
             }
         } else if (token.type == OPERATOR) {
-            if (!regex_search(content_updated, OPERATORS_REGEX)) {
+            if (regex_search(content_updated, COMMENT_LINE_REGEX) || regex_search(content_updated, COMMENT_BLOCK_INCOMPLETE_REGEX)) {
+                token.type = COMMENT;
+            } else if (!regex_search(content_updated, OPERATORS_REGEX)) {
                 if (regex_search(actual_char, SEPARATORS_IMPORTANT_REGEX) || regex_search(actual_char, ALPHA_REGEX) || regex_search(actual_char, NUMERIC_REGEX) || regex_search(actual_char, LITERAL_INCOMPLETE_REGEX)) {
                     break;
                 }
@@ -106,6 +111,11 @@ Token get_token(string::iterator& sentinel, string::iterator end, pair<int, int>
                 }
                 token.content = content_updated;
                 lexical_error(token);
+            }
+        } else if (token.type == COMMENT) {
+            if ((!regex_search(content_updated, COMMENT_LINE_REGEX) && !regex_search(content_updated, COMMENT_BLOCK_INCOMPLETE_REGEX)) || regex_search(content_updated, COMMENT_BLOCK_REGEX)) {
+                token.content = content_updated;
+                break;
             }
         }
         token.content = content_updated;
@@ -145,6 +155,8 @@ string enum_type_string(TokenType type) {
             return "OPERATOR";
         case LITERAL:
             return "LITERAL";
+        case COMMENT:
+            return "COMMENT";
         default:
             return "UNKNOWN";
     }

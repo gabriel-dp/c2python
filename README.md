@@ -57,3 +57,9 @@ Run the executable
   `(`, `)`, `{`, `}`, `[`, `]`, `;`, `,`
 - **Ignored separators (do not generate tokens)**:  
   whitespace, newline `\n`, tab `\t`
+
+### 6. Comments
+
+- Line comments start with `//`
+
+- Block comments start with `/*` and end with `*/`
