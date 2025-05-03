@@ -18,6 +18,7 @@ const regex COMMENT_BLOCK_INCOMPLETE_REGEX = regex(COMMENT_BLOCK_INCOMPLETE_PATT
 const regex OPERATORS_REGEX = create_regex(OPERATORS);
 const regex SEPARATORS_IGNORED_REGEX = create_regex(SEPARATORS_IGNORED);
 const regex SEPARATORS_IMPORTANT_REGEX = create_regex(SEPARATORS_IMPORTANT);
+const regex KEYWORDS_REGEX = create_regex(KEYWORDS);
 
 string escape_regex(const string& str) {
     static const regex special_chars(R"([.^$|()\\[*+?{}])");
@@ -67,7 +68,7 @@ Token get_token(string::iterator& sentinel, string::iterator end, pair<int, int>
                 break;
             } else if (regex_search(actual_char, OPERATORS_REGEX)) {
                 token.type = OPERATOR;
-            } else if (regex_search(actual_char, NUMERIC_INCOMPLETE_REGEX)) {
+            } else if (regex_search(actual_char, NUMERIC_REGEX)) {
                 token.type = NUMBER;
             } else if (regex_search(actual_char, LITERAL_INCOMPLETE_REGEX)) {
                 token.type = LITERAL;
@@ -75,6 +76,18 @@ Token get_token(string::iterator& sentinel, string::iterator end, pair<int, int>
         } else if (token.type == IDENTIFICATOR) {
             if (!regex_search(content_updated, ALPHA_NUMERIC_REGEX)) {
                 if (regex_search(actual_char, SEPARATORS_IMPORTANT_REGEX) || regex_search(actual_char, OPERATORS_REGEX)) {
+                    break;
+                }
+                token.content = content_updated;
+                lexical_error(token);
+            } else if (regex_search(content_updated, KEYWORDS_REGEX)) {
+                token.type = KEYWORD;
+            }
+        } else if (token.type == KEYWORD) {
+            if (!regex_search(content_updated, KEYWORDS_REGEX)) {
+                if (regex_search(content_updated, ALPHA_NUMERIC_REGEX)) {
+                    token.type = IDENTIFICATOR;
+                } else if (regex_search(actual_char, SEPARATORS_IMPORTANT_REGEX) || regex_search(actual_char, OPERATORS_REGEX)) {
                     break;
                 }
                 token.content = content_updated;
@@ -87,6 +100,7 @@ Token get_token(string::iterator& sentinel, string::iterator end, pair<int, int>
                 if (regex_search(actual_char, SEPARATORS_IMPORTANT_REGEX) || regex_search(actual_char, ALPHA_REGEX) || regex_search(actual_char, NUMERIC_REGEX) || regex_search(actual_char, LITERAL_INCOMPLETE_REGEX)) {
                     break;
                 }
+                break;
                 token.content = content_updated;
                 lexical_error(token);
             }
@@ -139,27 +153,6 @@ vector<Token> tokenize(string& buffer) {
     }
 
     return tokens;
-}
-
-string enum_type_string(TokenType type) {
-    switch (type) {
-        case NONE:
-            return "NONE";
-        case IDENTIFICATOR:
-            return "IDENTIFICATOR";
-        case NUMBER:
-            return "NUMBER";
-        case SEPARATOR:
-            return "SEPARATOR";
-        case OPERATOR:
-            return "OPERATOR";
-        case LITERAL:
-            return "LITERAL";
-        case COMMENT:
-            return "COMMENT";
-        default:
-            return "UNKNOWN";
-    }
 }
 
 void lexical_error(Token token) {

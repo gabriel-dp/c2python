@@ -25,8 +25,7 @@ int main(int argc, char* argv[]) {
     string buffer = get_content(argc, argv);
     vector<Token> tokens = tokenize(buffer);
     for (Token t : tokens) {
-        cout << "(" << t.position.first << "," << t.position.second << ") " << enum_type_string(t.type) << endl;
-        cout << t.content << "\n\n";
+        t.print();
     }
     return 0;
 }
