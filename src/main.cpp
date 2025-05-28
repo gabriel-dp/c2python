@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 
+#include "parser.hpp"
 #include "token.hpp"
 
 using namespace std;
@@ -24,8 +25,11 @@ string get_content(int argc, char* argv[]) {
 int main(int argc, char* argv[]) {
     string buffer = get_content(argc, argv);
     vector<Token> tokens = tokenize(buffer);
-    for (Token t : tokens) {
-        t.print();
+    Parser parser(tokens);
+    if (parser.parse()) {
+        cout << "Parsing successful!\n";
+    } else {
+        cout << "Parsing failed.\n";
     }
     return 0;
 }

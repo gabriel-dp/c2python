@@ -16,7 +16,8 @@ enum TokenType {
     SEPARATOR,
     LITERAL,
     NUMBER,
-    COMMENT
+    COMMENT,
+    END
 };
 
 const string ALPHA_PATTERN = "^[A-Za-z_]+$";
@@ -41,6 +42,7 @@ class Token {
     bool valid = true;
 
     Token() {};
+    Token(TokenType type) : type(type) {};
     Token(string content, TokenType type, pair<int, int> position) : content(move(content)), type(type), position(position) {};
 
     void print() {
