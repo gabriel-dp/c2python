@@ -12,6 +12,10 @@ Token Parser::advance() {
     return pos < tokens.size() ? tokens[pos++] : Token{TokenType::END};
 }
 
+Token Parser::last() const {
+    return pos > 0 ? tokens[pos - 1] : Token{TokenType::END};
+}
+
 bool Parser::match(string content, bool must_advance = true) {
     if (peek().content == content) {
         if (must_advance) advance();
@@ -64,7 +68,7 @@ bool Parser::statement() {
 }
 
 bool Parser::keyStatement() {
-    return ifStatement() || whileStatement() || doWhileStatement() || forStatement() || returnStatement();
+    return ifStatement() || whileStatement() || doWhileStatement() || forStatement() || returnStatement() || loopCommandsStatement();
 }
 
 bool Parser::type() {
@@ -75,26 +79,42 @@ bool Parser::type() {
 
 bool Parser::declaration() {
     if (type()) {
+        string variable_type = last().content;
         printAction("DECLARATION", false);
         do {
             if (match("*")) {
                 // pointer
             }
             if (match(TokenType::IDENTIFICATOR)) {
+                string variable_identificator = last().content;
+                if (scope.get_variable(variable_identificator) != nullptr) {
+                    // already declared
+                    return false;
+                }
+
                 if (match("=") && expression()) {
+                    scope.insert_variable_data(variable_identificator, VariableData(variable_type, true));
                     printAction(" ASSIGNMENT", false, false);
                 } else if (match("(")) {
+                    if (scope.actual_context_data().is_function) {
+                        // function inside function
+                        return false;
+                    }
+                    scope.insert_variable_data(variable_identificator, VariableData(variable_type, true));
                     printAction(" FUNCTION", true, false);
                     while (!match(")") && !match(",")) {
                         if (!(type() && ((match("*") && match(TokenType::IDENTIFICATOR)) || match(TokenType::IDENTIFICATOR)))) {
                             return false;
                         }
                     };
-                    level++;
+                    scope.actual_context_data().is_function = true;
                     if (!statement()) return false;
-                    level--;
+                    scope.actual_context_data().is_function = false;
                     return true;
+                } else {
+                    scope.insert_variable_data(variable_identificator, VariableData(variable_type));
                 }
+
                 if (!match(",") && !match(";", false)) {
                     return false;
                 }
@@ -110,9 +130,16 @@ bool Parser::declaration() {
 
 bool Parser::assignment() {
     if (match(TokenType::IDENTIFICATOR)) {
+        VariableData* variable = scope.get_variable(last().content);
+        if (variable == nullptr) {
+            // not declared
+            return false;
+        }
+
         if (match("=")) {
             if (expression() && match(";")) {
                 printAction("ASSIGNMENT");
+                variable->is_used = true;
                 return true;
             }
         }
@@ -122,9 +149,11 @@ bool Parser::assignment() {
 
 bool Parser::block() {
     if (match("{")) {
+        scope.init();
         while (!match("}")) {
             if (!statement()) return false;
         }
+        scope.endActual();
         return true;
     }
     return false;
@@ -153,6 +182,18 @@ bool Parser::parseUnaryExpression() {
 
 bool Parser::parsePrimaryExpression() {
     if (match(TokenType::NUMBER) || match(TokenType::IDENTIFICATOR)) {
+        if (last().type == TokenType::IDENTIFICATOR) {
+            VariableData* variable = scope.get_variable(last().content);
+            if (variable == nullptr) {
+                // not declared
+                return false;
+            }
+            if (!variable->is_initialized) {
+                // not initialized
+                return false;
+            }
+            variable->is_used = true;
+        }
         match(OPERATORS_UNARY_POSTFIX);
         return true;
     }
@@ -169,14 +210,10 @@ bool Parser::ifStatement() {
     if (match("if")) {
         printAction("IF");
         if (match("(") && expression() && match(")")) {
-            level++;
             if (!statement()) return false;
-            level--;
             if (match("else")) {
                 printAction("ELSE");
-                level++;
                 if (!statement()) return false;
-                level--;
             }
             return true;
         }
@@ -188,9 +225,7 @@ bool Parser::whileStatement() {
     if (match("while")) {
         printAction("WHILE");
         if (match("(") && expression() && match(")")) {
-            level++;
             if (!statement()) return false;
-            level--;
             return true;
         }
     }
@@ -200,9 +235,7 @@ bool Parser::whileStatement() {
 bool Parser::doWhileStatement() {
     if (match("do")) {
         printAction("DO-WHILE");
-        level++;
         if (!statement()) return false;
-        level--;
         return match("while") && match("(") && expression() && match(")") && match(";");
     }
     return false;
@@ -212,9 +245,7 @@ bool Parser::forStatement() {
     if (match("for")) {
         printAction("FOR", false);
         if (match("(") && (declaration() || assignment() || (expression() && match(";")) || match(";")) && ((expression() && match(";")) || match(";")) && ((expression() && match(")")) || match(")"))) {
-            level++;
             if (!statement()) return false;
-            level--;
             return true;
         }
     }
@@ -223,8 +254,23 @@ bool Parser::forStatement() {
 
 bool Parser::returnStatement() {
     if (match("return")) {
+        if (!scope.actual_context_data().is_function) {
+            // invalid return
+            return false;
+        }
         printAction("RETURN");
         return expression();
+    }
+    return false;
+}
+
+bool Parser::loopCommandsStatement() {
+    if (match("break") || match("continue")) {
+        if (!scope.actual_context_data().is_loop) {
+            // invalid loop command
+            return false;
+        }
+        return true;
     }
     return false;
 }

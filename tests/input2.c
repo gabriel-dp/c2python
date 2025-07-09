@@ -1,10 +1,10 @@
-int main() {
-    unsigned int a = 3, x, y;
-    float b, c, d;
+void main() {
+    int a = 3, x = 5, y;
+    float b = 1, c, d;
 
-    if (x) {
+    if (x == 1) {
         a = a - b;
-    } else if (y) {
+    } else if (x == 3) {
         a = a - b;
     } else
         a = a - b;
