@@ -26,10 +26,6 @@ int main(int argc, char* argv[]) {
     string buffer = get_content(argc, argv);
     vector<Token> tokens = tokenize(buffer);
     Parser parser(tokens);
-    if (parser.parse()) {
-        cout << "Parsing successful!\n";
-    } else {
-        cout << "Parsing failed.\n";
-    }
+    parser.parse();
     return 0;
 }

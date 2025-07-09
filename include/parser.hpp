@@ -83,7 +83,7 @@ class Scope {
 class Parser {
    public:
     Parser(const std::vector<Token>& tokens) : tokens(tokens), pos(0), level(0) {}
-    bool parse();
+    void parse();
 
    private:
     vector<string> TYPES = {"int", "float", "double", "char", "void"};
@@ -126,6 +126,25 @@ class Parser {
     bool parseBinaryExpression();
     bool parseUnaryExpression();
     bool parsePrimaryExpression();
+};
+
+class ParserException : public exception {
+   public:
+    ParserException(string message, Token token)
+        : message(message), token(token) {
+        full_message = message + " '" + token.content + "' (" +
+                       to_string(token.position.first) + ", " +
+                       to_string(token.position.second) + ")";
+    }
+
+    const char* what() const noexcept override {
+        return full_message.c_str();
+    }
+
+   private:
+    string message;
+    Token token;
+    string full_message;
 };
 
 #endif

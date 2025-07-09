@@ -52,19 +52,32 @@ void Parser::printAction(string action, bool newLine = true, bool printLevel = t
     if (newLine) cout << endl;
 }
 
-bool Parser::parse() {
-    return program() && peek().type == TokenType::END;
+void Parser::parse() {
+    if (program() && peek().type == TokenType::END) {
+        cout << "Parsing successful!\n";
+    } else {
+        cout << "Parsing failed.\n";
+    }
 }
 
 bool Parser::program() {
-    while (peek().type != TokenType::END) {
-        if (!statement()) return false;
+    try {
+        while (peek().type != TokenType::END) {
+            statement();
+        }
+    } catch (const ParserException& e) {
+        cout << "\n"
+             << e.what()
+             << "\n";
+        return false;
     }
     return true;
 }
 
 bool Parser::statement() {
-    return declaration() || assignment() || keyStatement() || block() || match(";");
+    bool result = declaration() || assignment() || keyStatement() || block() || match(";");
+    if (!result) throw ParserException("Invalid statement", last());
+    return result;
 }
 
 bool Parser::keyStatement() {
@@ -88,8 +101,7 @@ bool Parser::declaration() {
             if (match(TokenType::IDENTIFICATOR)) {
                 string variable_identificator = last().content;
                 if (scope.get_variable(variable_identificator) != nullptr) {
-                    // already declared
-                    return false;
+                    throw ParserException("Redefinition of variable", last());
                 }
 
                 if (match("=") && expression()) {
@@ -97,8 +109,7 @@ bool Parser::declaration() {
                     printAction(" ASSIGNMENT", false, false);
                 } else if (match("(")) {
                     if (scope.actual_context_data().is_function) {
-                        // function inside function
-                        return false;
+                        throw ParserException("Nested functions are not allowed", last());
                     }
                     scope.insert_variable_data(variable_identificator, VariableData(variable_type, true));
                     printAction(" FUNCTION", true, false);
@@ -108,7 +119,7 @@ bool Parser::declaration() {
                         }
                     };
                     scope.actual_context_data().is_function = true;
-                    if (!statement()) return false;
+                    statement();
                     scope.actual_context_data().is_function = false;
                     return true;
                 } else {
@@ -132,8 +143,7 @@ bool Parser::assignment() {
     if (match(TokenType::IDENTIFICATOR)) {
         VariableData* variable = scope.get_variable(last().content);
         if (variable == nullptr) {
-            // not declared
-            return false;
+            throw ParserException("Undeclared variable", last());
         }
 
         if (match("=")) {
@@ -151,7 +161,7 @@ bool Parser::block() {
     if (match("{")) {
         scope.init();
         while (!match("}")) {
-            if (!statement()) return false;
+            statement();
         }
         scope.endActual();
         return true;
@@ -185,12 +195,10 @@ bool Parser::parsePrimaryExpression() {
         if (last().type == TokenType::IDENTIFICATOR) {
             VariableData* variable = scope.get_variable(last().content);
             if (variable == nullptr) {
-                // not declared
-                return false;
+                throw ParserException("Undeclared variable", last());
             }
             if (!variable->is_initialized) {
-                // not initialized
-                return false;
+                throw ParserException("Uninitialized variable", last());
             }
             variable->is_used = true;
         }
@@ -210,13 +218,14 @@ bool Parser::ifStatement() {
     if (match("if")) {
         printAction("IF");
         if (match("(") && expression() && match(")")) {
-            if (!statement()) return false;
+            statement();
             if (match("else")) {
                 printAction("ELSE");
-                if (!statement()) return false;
+                statement();
             }
             return true;
         }
+        // invalid if statement
     }
     return false;
 }
@@ -225,7 +234,7 @@ bool Parser::whileStatement() {
     if (match("while")) {
         printAction("WHILE");
         if (match("(") && expression() && match(")")) {
-            if (!statement()) return false;
+            statement();
             return true;
         }
     }
@@ -235,8 +244,10 @@ bool Parser::whileStatement() {
 bool Parser::doWhileStatement() {
     if (match("do")) {
         printAction("DO-WHILE");
-        if (!statement()) return false;
-        return match("while") && match("(") && expression() && match(")") && match(";");
+        statement();
+        if (match("while") && match("(") && expression() && match(")") && match(";")) {
+            return true;
+        }
     }
     return false;
 }
@@ -244,8 +255,10 @@ bool Parser::doWhileStatement() {
 bool Parser::forStatement() {
     if (match("for")) {
         printAction("FOR", false);
+        scope.init();
         if (match("(") && (declaration() || assignment() || (expression() && match(";")) || match(";")) && ((expression() && match(";")) || match(";")) && ((expression() && match(")")) || match(")"))) {
-            if (!statement()) return false;
+            statement();
+            scope.endActual();
             return true;
         }
     }
@@ -255,8 +268,7 @@ bool Parser::forStatement() {
 bool Parser::returnStatement() {
     if (match("return")) {
         if (!scope.actual_context_data().is_function) {
-            // invalid return
-            return false;
+            throw ParserException("Return outside of a function", last());
         }
         printAction("RETURN");
         return expression();
@@ -267,8 +279,7 @@ bool Parser::returnStatement() {
 bool Parser::loopCommandsStatement() {
     if (match("break") || match("continue")) {
         if (!scope.actual_context_data().is_loop) {
-            // invalid loop command
-            return false;
+            throw ParserException("Not inside a loop", last());
         }
         return true;
     }
