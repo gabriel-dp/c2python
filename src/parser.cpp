@@ -75,8 +75,10 @@ bool Parser::program() {
 }
 
 bool Parser::statement() {
+    generator.startStatement();
     bool result = declaration() || assignment() || keyStatement() || block() || match(";");
-    if (!result) throw ParserException("Invalid statement", last());
+    generator.endStatement();
+    if (!result) throw ParserException("Invalid statement", peek());
     return result;
 }
 
@@ -104,13 +106,17 @@ bool Parser::declaration() {
                     throw ParserException("Redefinition of variable", last());
                 }
 
-                if (match("=") && expression()) {
-                    scope.insert_variable_data(variable_identificator, VariableData(variable_type, true));
-                    printAction(" ASSIGNMENT", false, false);
+                if (match("=")) {
+                    generator.generateAssignment(variable_identificator);
+                    if (expression()) {
+                        scope.insert_variable_data(variable_identificator, VariableData(variable_type, true));
+                        printAction(" ASSIGNMENT", false, false);
+                    }
                 } else if (match("(")) {
                     if (scope.actual_context_data().is_function) {
                         throw ParserException("Nested functions are not allowed", last());
                     }
+                    generator.generateFunction(variable_identificator);
                     scope.insert_variable_data(variable_identificator, VariableData(variable_type, true));
                     printAction(" FUNCTION", true, false);
                     while (!match(")") && !match(",")) {
@@ -123,11 +129,17 @@ bool Parser::declaration() {
                     scope.actual_context_data().is_function = false;
                     return true;
                 } else {
+                    generator.generateDeclaration(variable_identificator);
                     scope.insert_variable_data(variable_identificator, VariableData(variable_type));
                 }
 
-                if (!match(",") && !match(";", false)) {
-                    return false;
+                if (!match(",")) {
+                    if (!match(";", false)) {
+                        return false;
+                    }
+                } else {
+                    generator.endStatement();
+                    generator.startStatement();
                 }
             } else {
                 return false;
@@ -141,12 +153,14 @@ bool Parser::declaration() {
 
 bool Parser::assignment() {
     if (match(TokenType::IDENTIFICATOR)) {
-        VariableData* variable = scope.get_variable(last().content);
+        string identificator = last().content;
+        VariableData* variable = scope.get_variable(identificator);
         if (variable == nullptr) {
             throw ParserException("Undeclared variable", last());
         }
 
         if (match("=")) {
+            generator.generateAssignment(identificator);
             if (expression() && match(";")) {
                 printAction("ASSIGNMENT");
                 variable->is_used = true;
@@ -160,9 +174,11 @@ bool Parser::assignment() {
 bool Parser::block() {
     if (match("{")) {
         scope.init();
+        generator.startBlock();
         while (!match("}")) {
             statement();
         }
+        generator.endBlock();
         scope.endActual();
         return true;
     }
@@ -177,6 +193,7 @@ bool Parser::parseBinaryExpression() {
     if (!parseUnaryExpression()) return false;
 
     while (match(OPERATORS_BINARY)) {
+        generator.generateToken(last().content);
         if (!parseUnaryExpression()) return false;
     }
     return true;
@@ -184,6 +201,7 @@ bool Parser::parseBinaryExpression() {
 
 bool Parser::parseUnaryExpression() {
     if (match(OPERATORS_UNARY_PREFIX)) {
+        generator.generateToken(last().content);
         return parseUnaryExpression();
     }
 
@@ -202,13 +220,21 @@ bool Parser::parsePrimaryExpression() {
             }
             variable->is_used = true;
         }
-        match(OPERATORS_UNARY_POSTFIX);
+        generator.generateToken(last().content);
+        if (match(OPERATORS_UNARY_POSTFIX)) {
+            generator.generateToken(last().content);
+        }
         return true;
     }
 
     if (match("(")) {
+        generator.generateToken(last().content);
         if (!expression()) return false;
-        return match(")");
+        generator.generateToken(peek().content);
+        if (!match(")")) {
+            throw ParserException("Expected close bracket", peek());
+        }
+        return true;
     }
 
     return false;
@@ -217,21 +243,27 @@ bool Parser::parsePrimaryExpression() {
 bool Parser::ifStatement() {
     if (match("if")) {
         printAction("IF");
+        generator.generateCondition();
         if (match("(") && expression() && match(")")) {
             statement();
             if (match("else")) {
+                generator.startStatement();
+                generator.endBlock();
+                generator.generateConditionNot();
+                generator.startBlock();
+                generator.startStatement();
                 printAction("ELSE");
                 statement();
             }
             return true;
         }
-        // invalid if statement
     }
     return false;
 }
 
 bool Parser::whileStatement() {
     if (match("while")) {
+        generator.generateLoop();
         printAction("WHILE");
         if (match("(") && expression() && match(")")) {
             statement();
@@ -267,6 +299,7 @@ bool Parser::forStatement() {
 
 bool Parser::returnStatement() {
     if (match("return")) {
+        generator.generateReturn();
         if (!scope.actual_context_data().is_function) {
             throw ParserException("Return outside of a function", last());
         }

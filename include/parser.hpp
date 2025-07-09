@@ -3,86 +3,13 @@
 
 #include <stack>
 
+#include "generator.hpp"
+#include "scope.hpp"
 #include "token.hpp"
-
-typedef struct context_data_t {
-    bool is_function = false;
-    bool is_loop = false;
-} context_data;
-
-class VariableData {
-   public:
-    VariableData() {};
-    VariableData(string type) : type(type) {};
-    VariableData(string type, bool is_initialized) : type(type), is_initialized(is_initialized) {};
-    VariableData(string type, bool is_initialized, bool is_used) : type(type), is_initialized(is_initialized), is_used(is_used) {};
-
-    string type;
-    bool is_initialized = false;
-    bool is_used = false;
-};
-
-class Scope {
-   public:
-    Scope() {
-        context_data initial_context;
-        unordered_map<string, VariableData> initial_variables;
-        this->scope_stack.emplace(make_pair(initial_context, initial_variables));
-    }
-
-    void init() {
-        this->scope_stack.emplace(make_pair(this->actual_context_data(), this->actual_variables_data()));
-    }
-
-    void endActual() {
-        scope_stack.pop();
-    }
-
-    void insert_variable_data(string identificator, VariableData data) {
-        auto& variables = actual_variables_data();
-        variables[identificator] = data;
-    }
-
-    VariableData* get_variable(string identificator) {
-        auto& variables = actual_variables_data();
-        auto found = variables.find(identificator);
-        if (found != variables.end()) {
-            return &(found->second);
-        }
-        return nullptr;
-    }
-
-    void kill_variable(string identificator) {
-        auto& variables = actual_variables_data();
-        if (variables.find(identificator) != variables.end()) {
-            variables.erase(identificator);
-        }
-    }
-
-    context_data& actual_context_data() {
-        return this->scope_stack.top().first;
-    }
-
-    unordered_map<string, VariableData>& actual_variables_data() {
-        return this->scope_stack.top().second;
-    }
-
-    void print() {
-        cout << "is_function = " << actual_context_data().is_function << " |  is_loop = " << actual_context_data().is_loop << "\n";
-        cout << actual_variables_data().size() << "\n";
-        for (auto variable : actual_variables_data()) {
-            cout << variable.first << " { " << variable.second.type << ", " << variable.second.is_initialized << ", " << variable.second.is_used << " }\n";
-        }
-        cout << "\n";
-    }
-
-   private:
-    stack<pair<context_data, unordered_map<string, VariableData>>> scope_stack;
-};
 
 class Parser {
    public:
-    Parser(const std::vector<Token>& tokens) : tokens(tokens), pos(0), level(0) {}
+    Parser(const std::vector<Token>& tokens, Generator& generator) : tokens(tokens), pos(0), level(0), generator(generator) {};
     void parse();
 
    private:
@@ -96,8 +23,10 @@ class Parser {
     size_t pos;
     int level = 0;
     Scope scope;
+    Generator& generator;
 
-    Token peek() const;
+    Token
+    peek() const;
     Token advance();
     Token last() const;
     bool match(TokenType type, bool must_advance);

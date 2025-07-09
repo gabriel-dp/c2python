@@ -4,21 +4,12 @@ void main() {
 
     if (x == 1) {
         a = a - b;
-    } else if (x) {
-        a = a - b;
+    } else if (x == 2) {
+        a = (a - b) * 2;
     } else
         a = a - b;
 
-    do {
-        x = x + 1;
-    } while (1);
-
-    while (
-        1) a = b;
-
-    for (int i = 0; i < 10; i++) {
-        a = i;
-    }
+    while (1) a = b;
 
     return 0;
 }
