@@ -9,7 +9,9 @@ void main() {
     } else
         a = a - b;
 
-    while (1) a = b;
+    while (1) {
+        a = b;
+    }
 
     return 0;
 }
