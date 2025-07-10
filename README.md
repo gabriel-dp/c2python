@@ -22,7 +22,7 @@ make
 Run the executable
 
 ```bash
-./bin/compiler <source_file>
+./bin/compiler <source_file.c> <output_file.py>
 ```
 
 &nbsp;
@@ -63,3 +63,15 @@ Run the executable
 - Line comments start with `//`
 
 - Block comments start with `/*` and end with `*/`
+
+&nbsp;
+
+## Discussion
+
+This project was built only for educational purposes, probably will never be finished, but was a great way to learn more about compilers.
+
+- [x] Lexical Analyzer
+- [x] Syntax Analyzer
+- [x] Semantic Analyzer
+- [x] Code Generation (poor)
+- [ ] Optimization
